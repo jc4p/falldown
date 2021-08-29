@@ -2,7 +2,7 @@ var config = {
   type: Phaser.AUTO,
   width: 512,
   height: 512,
-  backgroundColor: '#345654',
+  backgroundColor: window.background_color_hex || '#345654',
   audio: {
     noAudio: true,
     disableWebAudio: true
@@ -63,10 +63,13 @@ function preload(instance) {
     thisObj = instance;
   }
 
-  ball = thisObj.add.ellipse(256, 0, BALL_SIZE, BALL_SIZE, 0xf19ff9);
+  ball = thisObj.add.ellipse(256, 0, BALL_SIZE, BALL_SIZE, window.player_color || 0xF19FF9);
   thisObj.physics.add.existing(ball, false);
   ball.setDepth(5);
   ball.body.setBounce(0, BALL_BOUNCE);
+  if (window.player_stroke_color) {
+    ball.setStrokeStyle(1, window.player_stroke_color);
+  }
 
   addLine(thisObj)
 }
@@ -174,7 +177,7 @@ function addLine(instance) {
     }
 
     var blockX = (i * BLOCK_WIDTH) + (BLOCK_WIDTH * 0.5);
-    var block = instance.add.rectangle(blockX, START_HEIGHT, BLOCK_WIDTH, BLOCK_HEIGHT, 0xECECEC)
+    var block = instance.add.rectangle(blockX, START_HEIGHT, BLOCK_WIDTH, BLOCK_HEIGHT, window.block_color || 0xECECEC);
     instance.physics.add.existing(block, false);
     block.body.setImmovable(true);
 
@@ -210,21 +213,25 @@ function checkBall(instance) {
     ball.body.setVelocityX(0);
   }
 
-  var ballLeft = ball.x + (BALL_SIZE * 0.49);
-  var ballRight = ball.x + (BALL_SIZE * 0.49);
+  var ballLeft = ball.x;
+  var ballRight = ball.x + BALL_SIZE;
 
   for (i = 0; i < lines.length; i++) {
     var line = lines[i];
     for (j = 0; j < line.length; j++) {
       var inGraceSpace = false;
-      var thisDistance = Math.abs(ballRight - line[j].x);
+
+      var tileLeft = line[j].x;
+      var tileRight = line[j].x + BLOCK_WIDTH;
+
+      var onTile = (tileLeft <= ballLeft < tileRight) || (tileRight >= ballRight > tileRight)
 
       var nextIsBlank = false;
       if (j !== line.length -1) {
         var nextTile = line[j + 1];
         if (nextTile.x > line[j].x + BLOCK_WIDTH) {
           nextIsBlank = true;
-          if (Math.abs(ballRight - nextTile.x) < thisDistance) {
+          if (onTile) {
             inGraceSpace = true;
           }
         }
@@ -235,7 +242,7 @@ function checkBall(instance) {
         var prevTile = line[j - 1];
         if (prevTile.x < line[j].x - BLOCK_WIDTH) {
           prevIsBlank = true;
-          if (Math.abs(ballLeft - nextTile.x) < thisDistance) {
+          if (onTile) {
             inGraceSpace = true;
           }
         }
@@ -246,8 +253,10 @@ function checkBall(instance) {
         ball.setY(lineTop - BALL_SIZE);
       } else if (instance.physics.collide(ball, line[j] && (prevIsBlank || nextIsBlank))) {
         if (nextIsBlank) {
+          ball.setY(lineTop + BALL_SIZE);
           ball.setX(lineX + BALL_SIZE)
         } else {
+          ball.setY(lineTop + BALL_SIZE);
           ball.setX(lineX - BALL_SIZE)
         }
       }
@@ -280,10 +289,10 @@ function setBallMovement() {
       }
 
       // see if we need to simulate bounce simulate bounce
-      if (movingLeft && ball.x < 50) {
+      if (movingLeft && ball.x < 30) {
         ball.body.setVelocityX(50)
         prevTouchDirection = null;
-      } else if (!movingLeft && ball.x > (game.config.width - 50)) {
+      } else if (!movingLeft && ball.x > (game.config.width - 30)) {
         ball.body.setVelocityX(-50)
         prevTouchDirection = null;
       } else {
