@@ -55,7 +55,10 @@ var isTouching = false;
 var ticksSinceTouchUp = 100;
 var prevTouchDirection = null;
 
-var mt = new MersenneTwister();
+var mt = new MersenneTwister(0xCECE184D007);
+
+var AUTO_PLAY = true;
+var counter;
 
 function preload(instance) {
   var thisObj = this;
@@ -69,6 +72,10 @@ function preload(instance) {
   ball.body.setBounce(0, BALL_BOUNCE);
   if (window.player_stroke_color) {
     ball.setStrokeStyle(1, window.player_stroke_color);
+  }
+
+  if (!instance) {
+    counter = this.add.text(0, 0);
   }
 
   addLine(thisObj)
@@ -137,7 +144,7 @@ function generateLines(instance) {
   var topLineY = latestLine[0].body.y;
 
 
-  var lineDelay = 0.68;
+  var lineDelay = 0.70;
 
   var currentSeconds = gameTicks / 60;
   if (currentSeconds > SECONDS_TIL_FIRST_LINE_REDUCTION) {
@@ -261,6 +268,60 @@ function checkBall(instance) {
         }
       }
     }
+  }
+
+  if (AUTO_PLAY) {
+    var ballY = ball.y;
+
+    if (lines.length < 3) {
+      return;
+    }
+
+    var nextLine = null;
+
+    for (var i = 0; i < lines.length; i++) {
+      var lineY = lines[i][0].y;
+      var distance = lineY - ballY;
+      if (distance < 0) {
+        continue;
+      }
+      if (distance <= (BALL_SIZE * 1.25)) {
+        nextLine = lines[i];
+        break;
+      }
+    }
+
+    if (!nextLine) {
+      return;
+    }
+
+    var blankCenterX = -1;
+    for (var j = 0; j < nextLine.length; j++) {
+      if (j == nextLine.length - 1) {
+        break
+      }
+      if (!nextLine[j+1]) {
+        continue
+      }
+
+      var blockX = nextLine[j].x;
+      var nextBlockX = nextLine[j + 1].x;
+
+      if (nextBlockX != (blockX + BLOCK_WIDTH)) {
+        blankCenterX = blockX + ((nextBlockX - blockX) / 2)
+      }
+    }
+
+    if (blankCenterX == -1) {
+      return;
+    }
+
+    if (Math.abs(ball.x - blankCenterX) < 10) {
+      return;
+    }
+
+    var moveLeft = blankCenterX < ball.x
+    ball.body.setVelocityX(moveLeft ? -0.8 * BALL_HORIZONTAL_VELOCITY : 0.8 * BALL_HORIZONTAL_VELOCITY)
   }
 }
 
